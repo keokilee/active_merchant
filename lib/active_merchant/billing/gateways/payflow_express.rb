@@ -110,6 +110,15 @@ module ActiveMerchant #:nodoc:
         commit(request, options)
       end
 
+      def recurring(money, options={})
+        ActiveMerchant.deprecated Gateway::RECURRING_DEPRECATION_MESSAGE
+
+        request = build_recurring_request(options[:profile_id] ? :modify : :add, money, options) do |xml|
+          add_paypal_details(xml, options)
+        end
+        commit(request, options.merge(:request_type => :recurring))
+      end
+
       private
       def build_get_express_details_request(token)
         xml = Builder::XmlMarkup.new :indent => 2
@@ -212,6 +221,60 @@ module ActiveMerchant #:nodoc:
           xml.tag! 'HeaderBackColor', options[:header_background_color] unless options[:header_background_color].blank?
           xml.tag! 'HeaderBorderColor', options[:header_border_color] unless options[:header_border_color].blank?
           xml.tag! 'ExtData', 'Name' => 'ALLOWNOTE', 'Value' => options[:allow_note]
+        end
+      end
+
+      def build_recurring_request(action, money, options)
+        unless RECURRING_ACTIONS.include?(action)
+          raise StandardError, "Invalid Recurring Profile Action: #{action}"
+        end
+
+        xml = Builder::XmlMarkup.new
+        xml.tag! 'RecurringProfiles' do
+          xml.tag! 'RecurringProfile' do
+            xml.tag! action.to_s.capitalize do
+              unless [:cancel, :inquiry].include?(action)
+                xml.tag! 'RPData' do
+                  xml.tag! 'Name', options[:name] unless options[:name].nil?
+                  xml.tag! 'TotalAmt', amount(money), 'Currency' => options[:currency] || currency(money)
+                  xml.tag! 'PayPeriod', get_pay_period(options)
+                  xml.tag! 'Term', options[:payments] unless options[:payments].nil?
+                  xml.tag! 'Comment', options[:comment] unless options[:comment].nil?
+                  xml.tag! 'RetryNumDays', options[:retry_num_days] unless options[:retry_num_days].nil?
+                  xml.tag! 'MaxFailPayments', options[:max_fail_payments] unless options[:max_fail_payments].nil?
+
+                  if initial_tx = options[:initial_transaction]
+                    requires!(initial_tx, [:type, :authorization, :purchase])
+                    requires!(initial_tx, :amount) if initial_tx[:type] == :purchase
+
+                    xml.tag! 'OptionalTrans', TRANSACTIONS[initial_tx[:type]]
+                    xml.tag! 'OptionalTransAmt', amount(initial_tx[:amount]) unless initial_tx[:amount].blank?
+                  end
+
+                  if action == :add
+                    xml.tag! 'Start', format_rp_date(options[:starting_at] || Date.today + 1 )
+                  else
+                    xml.tag! 'Start', format_rp_date(options[:starting_at]) unless options[:starting_at].nil?
+                  end
+
+                  xml.tag! 'EMail', options[:email] unless options[:email].nil?
+
+                  billing_address = options[:billing_address] || options[:address]
+                  add_address(xml, 'BillTo', billing_address, options) if billing_address
+                  add_address(xml, 'ShipTo', options[:shipping_address], options) if options[:shipping_address]
+                end
+                xml.tag! 'Tender' do
+                  yield xml
+                end
+              end
+              if action != :add
+                xml.tag! "ProfileID", options[:profile_id]
+              end
+              if action == :inquiry
+                xml.tag! "PaymentHistory", ( options[:history] ? 'Y' : 'N' )
+              end
+            end
+          end
         end
       end
 
