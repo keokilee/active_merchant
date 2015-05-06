@@ -294,6 +294,14 @@ module ActiveMerchant #:nodoc:
         end
       end
 
+      def format_rp_date(time)
+        case time
+          when Time, Date then time.strftime("%m%d%Y")
+        else
+          time.to_s
+        end
+      end
+
       def build_response(success, message, response, options = {})
         PayflowExpressResponse.new(success, message, response, options)
       end
