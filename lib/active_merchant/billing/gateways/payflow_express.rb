@@ -65,6 +65,8 @@ module ActiveMerchant #:nodoc:
       include PayflowCommonAPI
       include PaypalExpressCommon
 
+      RECURRING_ACTIONS = Set.new([:add, :modify, :cancel, :inquiry, :reactivate, :payment])
+
       self.test_redirect_url = 'https://www.sandbox.paypal.com/cgi-bin/webscr'
       self.homepage_url = 'https://www.paypal.com/cgi-bin/webscr?cmd=xpt/merchant/ExpressCheckoutIntro-outside'
       self.display_name = 'PayPal Express Checkout'
