@@ -280,6 +280,20 @@ module ActiveMerchant #:nodoc:
         end
       end
 
+      def get_pay_period(options)
+        requires!(options, [:periodicity, :bimonthly, :monthly, :biweekly, :weekly, :yearly, :daily, :semimonthly, :quadweekly, :quarterly, :semiyearly])
+        case options[:periodicity]
+          when :weekly then 'Weekly'
+          when :biweekly then 'Bi-weekly'
+          when :semimonthly then 'Semi-monthly'
+          when :quadweekly then 'Every four weeks'
+          when :monthly then 'Monthly'
+          when :quarterly then 'Quarterly'
+          when :semiyearly then 'Semi-yearly'
+          when :yearly then 'Yearly'
+        end
+      end
+
       def build_response(success, message, response, options = {})
         PayflowExpressResponse.new(success, message, response, options)
       end
