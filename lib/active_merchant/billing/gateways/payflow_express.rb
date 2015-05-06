@@ -116,10 +116,10 @@ module ActiveMerchant #:nodoc:
         ActiveMerchant.deprecated Gateway::RECURRING_DEPRECATION_MESSAGE
 
         request = build_recurring_request(options[:profile_id] ? :modify : :add, money, options) do |xml|
-          add_paypal_details(xml, options)
+          xml.tag! 'PayPal' do
+            xml.tag! 'Token', options[:token]
+          end
         end
-
-        p request
         commit(request, options.merge(:request_type => :recurring))
       end
 
@@ -205,8 +205,7 @@ module ActiveMerchant #:nodoc:
       end
 
       def add_paypal_details(xml, options)
-        p options
-        xml.tag! 'PayPal' do
+         xml.tag! 'PayPal' do
           xml.tag! 'EMail', options[:email] unless options[:email].blank?
           xml.tag! 'ReturnURL', options[:return_url] unless options[:return_url].blank?
           xml.tag! 'CancelURL', options[:cancel_return_url] unless options[:cancel_return_url].blank?
